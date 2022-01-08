@@ -6,7 +6,7 @@
 
 [![npm version](https://img.shields.io/npm/v/eslint-plugin-functional.svg?style=flat)](https://www.npmjs.com/package/eslint-plugin-functional)
 [![CI](https://github.com/jonaskello/eslint-plugin-functional/actions/workflows/ci.yml/badge.svg)](https://github.com/jonaskello/eslint-plugin-functional/actions/workflows/ci.yml)
-[![Coverage Status](https://codecov.io/gh/jonaskello/eslint-plugin-functional/branch/master/graph/badge.svg)](https://codecov.io/gh/jonaskello/eslint-plugin-functional)
+[![Coverage Status](https://codecov.io/gh/jonaskello/eslint-plugin-functional/branch/main/graph/badge.svg)](https://codecov.io/gh/jonaskello/eslint-plugin-functional)
 [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg?style=flat)](https://github.com/semantic-release/semantic-release)
 [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat)](https://github.com/prettier/prettier)
 [![MIT license](https://img.shields.io/github/license/jonaskello/eslint-plugin-functional.svg?style=flat)](https://opensource.org/licenses/MIT)
@@ -115,7 +115,7 @@ To use type information, you will need to specify a path to your `tsconfig.json`
 }
 ```
 
-See [@typescript-eslint/parser's README.md](https://github.com/typescript-eslint/typescript-eslint/tree/master/packages/parser#readme) for more information on the available parser options.
+See [@typescript-eslint/parser's README.md](https://github.com/typescript-eslint/typescript-eslint/tree/main/packages/parser#readme) for more information on the available parser options.
 
 ### Example Config
 
@@ -258,18 +258,18 @@ Without this rule, function parameters are mutable.
 
 This rule is helpful when converting from an imperative code style to a functional one.
 
-### [@typescript-eslint/prefer-readonly](https://github.com/typescript-eslint/typescript-eslint/blob/master/packages/eslint-plugin/docs/rules/prefer-readonly.md)
+### [@typescript-eslint/prefer-readonly](https://github.com/typescript-eslint/typescript-eslint/blob/main/packages/eslint-plugin/docs/rules/prefer-readonly.md)
 
 This rule is helpful when working with classes.
 
-### [@typescript-eslint/prefer-readonly-parameter-types](https://github.com/typescript-eslint/typescript-eslint/blob/master/packages/eslint-plugin/docs/rules/prefer-readonly-parameter-types.md)
+### [@typescript-eslint/prefer-readonly-parameter-types](https://github.com/typescript-eslint/typescript-eslint/blob/main/packages/eslint-plugin/docs/rules/prefer-readonly-parameter-types.md)
 
 Functional functions must not modify any data passed into them.
 This rule marks mutable parameters as a violation as they prevent readonly versions of that data from being passed in.
 
 However, due to many 3rd-party libraries only providing mutable versions of their types, often it can not be easy to satisfy this rule. Thus by default we only enable this rule with the "warn" severity rather than "error".
 
-### [@typescript-eslint/switch-exhaustiveness-check](https://github.com/typescript-eslint/typescript-eslint/blob/master/packages/eslint-plugin/docs/rules/switch-exhaustiveness-check.md)
+### [@typescript-eslint/switch-exhaustiveness-check](https://github.com/typescript-eslint/typescript-eslint/blob/main/packages/eslint-plugin/docs/rules/switch-exhaustiveness-check.md)
 
 Although our [no-conditional-statement](./docs/rules/no-conditional-statement.md) rule also performs this check, this rule has a fixer that will implement the unimplemented cases which can be useful.
 
