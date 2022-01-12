@@ -114,6 +114,20 @@ export const ignoreInterfaceOptionSchema: JSONSchema4 = {
   additionalProperties: false,
 };
 
+export type IgnoreInferredTypesOption = {
+  readonly ignoreInferredTypes: boolean;
+};
+
+export const ignoreInferredTypesOptionOptionSchema: JSONSchema4 = {
+  type: "object",
+  properties: {
+    ignoreInferredTypes: {
+      type: "boolean",
+    },
+  },
+  additionalProperties: false,
+};
+
 /**
  * Get the identifier text of the given node.
  */
@@ -309,6 +323,19 @@ export function shouldIgnoreInterface(
   options: Partial<IgnoreInterfaceOption>
 ): boolean {
   return options.ignoreInterface === true && inInterface(node);
+}
+
+/**
+ * Should the given node be allowed base off the following rule options?
+ *
+ * - IgnoreInterfaceOption.
+ */
+export function shouldIgnoreInferredTypes(
+  node: TSESTree.TypeNode,
+  context: RuleContext<string, BaseOptions>,
+  options: Partial<IgnoreInferredTypesOption>
+) {
+  return options.ignoreInferredTypes === true && node === null;
 }
 
 /**
