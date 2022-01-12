@@ -2,8 +2,7 @@ import type { TSESTree } from "@typescript-eslint/experimental-utils";
 import { AST_NODE_TYPES } from "@typescript-eslint/experimental-utils";
 
 /**
- * Returns a function that checks if the given value is the same as the expected
- * value.
+ * Higher order function to check if the two given values are the same.
  */
 export function isExpected<T>(expected: T): (actual: T) => boolean {
   return (actual) => actual === expected;

@@ -13,10 +13,10 @@ import off from "~/configs/off";
 import stylistic from "~/configs/stylistic";
 import { rules } from "~/rules";
 
-type EslintPluginConfig = {
-  readonly rules: Record<string, Rule.RuleModule>;
-  readonly configs: Record<string, Linter.Config>;
-};
+type EslintPluginConfig = Readonly<{
+  rules: Readonly<Record<string, Readonly<Rule.RuleModule>>>;
+  configs: Readonly<Record<string, Readonly<Linter.Config>>>;
+}>;
 
 const config: EslintPluginConfig = {
   rules,

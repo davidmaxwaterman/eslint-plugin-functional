@@ -21,14 +21,11 @@ import {
 import { filename, configs } from "~/tests/helpers/configs";
 import { testWrapper } from "~/tests/helpers/testers";
 import { addFilename, createDummyRule } from "~/tests/helpers/util";
-import type { BaseOptions, RuleContext } from "~/util/rule";
+import type { BaseOptions } from "~/util/rule";
 
-/**
- *
- */
 function shouldIgnore(
   node: TSESTree.Node,
-  context: RuleContext<string, BaseOptions>,
+  context: TSESLint.RuleContext<string, BaseOptions>,
   options: Partial<
     AllowLocalMutationOption &
       IgnoreAccessorPatternOption &

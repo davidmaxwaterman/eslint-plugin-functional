@@ -1,8 +1,8 @@
-import type { TSESTree } from "@typescript-eslint/experimental-utils";
+import type { TSESLint, TSESTree } from "@typescript-eslint/experimental-utils";
 import escapeRegExp from "escape-string-regexp";
 import type { JSONSchema4 } from "json-schema";
 
-import type { BaseOptions, RuleContext } from "~/util/rule";
+import type { BaseOptions } from "~/util/rule";
 import {
   getKeyOfValueInObjectExpression,
   inClass,
@@ -119,7 +119,7 @@ export const ignoreInterfaceOptionSchema: JSONSchema4 = {
  */
 function getNodeIdentifierText(
   node: TSESTree.Node | null | undefined,
-  context: RuleContext<string, BaseOptions>
+  context: TSESLint.RuleContext<string, BaseOptions>
 ): string | undefined {
   if (!isDefined(node)) {
     return undefined;
@@ -170,7 +170,7 @@ function getNodeIdentifierText(
  */
 function getNodeIdentifierTexts(
   node: TSESTree.Node,
-  context: RuleContext<string, BaseOptions>
+  context: TSESLint.RuleContext<string, BaseOptions>
 ): ReadonlyArray<string> {
   return (
     isVariableDeclaration(node)
@@ -271,10 +271,10 @@ function shouldIgnoreViaAccessorPattern(
  */
 export function shouldIgnoreLocalMutation(
   node: TSESTree.Node,
-  context: RuleContext<string, BaseOptions>,
-  options: Partial<AllowLocalMutationOption>
+  context: TSESLint.RuleContext<string, BaseOptions>,
+  { allowLocalMutation }: Partial<AllowLocalMutationOption>
 ): boolean {
-  return options.allowLocalMutation === true && inFunctionBody(node);
+  return allowLocalMutation === true && inFunctionBody(node);
 }
 
 /**
@@ -284,12 +284,12 @@ export function shouldIgnoreLocalMutation(
  */
 export function shouldIgnoreClass(
   node: TSESTree.Node,
-  context: RuleContext<string, BaseOptions>,
-  options: Partial<IgnoreClassOption>
+  context: TSESLint.RuleContext<string, BaseOptions>,
+  { ignoreClass }: Partial<IgnoreClassOption>
 ): boolean {
   return (
-    (options.ignoreClass === true && inClass(node)) ||
-    (options.ignoreClass === "fieldsOnly" &&
+    (ignoreClass === true && inClass(node)) ||
+    (ignoreClass === "fieldsOnly" &&
       (isPropertyDefinition(node) ||
         (isAssignmentExpression(node) &&
           inClass(node) &&
@@ -305,10 +305,10 @@ export function shouldIgnoreClass(
  */
 export function shouldIgnoreInterface(
   node: TSESTree.Node,
-  context: RuleContext<string, BaseOptions>,
-  options: Partial<IgnoreInterfaceOption>
+  context: TSESLint.RuleContext<string, BaseOptions>,
+  { ignoreInterface }: Partial<IgnoreInterfaceOption>
 ): boolean {
-  return options.ignoreInterface === true && inInterface(node);
+  return ignoreInterface === true && inInterface(node);
 }
 
 /**
@@ -319,8 +319,11 @@ export function shouldIgnoreInterface(
  */
 export function shouldIgnorePattern(
   node: TSESTree.Node,
-  context: RuleContext<string, BaseOptions>,
-  options: Partial<IgnoreAccessorPatternOption & IgnorePatternOption>
+  context: TSESLint.RuleContext<string, BaseOptions>,
+  {
+    ignorePattern,
+    ignoreAccessorPattern,
+  }: Partial<IgnoreAccessorPatternOption & IgnorePatternOption>
 ): boolean {
   const texts = getNodeIdentifierTexts(node, context);
 
@@ -330,14 +333,12 @@ export function shouldIgnorePattern(
 
   return (
     // Ignore if ignorePattern is set and a pattern matches.
-    (options.ignorePattern !== undefined &&
-      texts.every((text) =>
-        shouldIgnoreViaPattern(text, options.ignorePattern!)
-      )) ||
+    (ignorePattern !== undefined &&
+      texts.every((text) => shouldIgnoreViaPattern(text, ignorePattern))) ||
     // Ignore if ignoreAccessorPattern is set and an accessor pattern matches.
-    (options.ignoreAccessorPattern !== undefined &&
+    (ignoreAccessorPattern !== undefined &&
       texts.every((text) =>
-        shouldIgnoreViaAccessorPattern(text, options.ignoreAccessorPattern!)
+        shouldIgnoreViaAccessorPattern(text, ignoreAccessorPattern)
       ))
   );
 }

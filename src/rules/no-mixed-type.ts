@@ -1,21 +1,33 @@
-import type { TSESTree } from "@typescript-eslint/experimental-utils";
+import type {
+  ESLintUtils,
+  TSESLint,
+  TSESTree,
+} from "@typescript-eslint/experimental-utils";
 import { AST_NODE_TYPES } from "@typescript-eslint/experimental-utils";
 import type { JSONSchema4 } from "json-schema";
 
-import type { RuleContext, RuleMetaData, RuleResult } from "~/util/rule";
+import type { RuleResult } from "~/util/rule";
 import { createRule } from "~/util/rule";
 import { isTSPropertySignature, isTSTypeLiteral } from "~/util/typeguard";
 
-// The name of this rule.
+/**
+ * The name of this rule.
+ */
 export const name = "no-mixed-type" as const;
 
-// The options this rule can take.
-type Options = {
-  readonly checkInterfaces: boolean;
-  readonly checkTypeLiterals: boolean;
-};
+/**
+ * The options this rule can take.
+ */
+type Options = readonly [
+  Readonly<{
+    checkInterfaces: boolean;
+    checkTypeLiterals: boolean;
+  }>
+];
 
-// The schema for the rule options.
+/**
+ * The schema for the rule options.
+ */
 const schema: JSONSchema4 = [
   {
     type: "object",
@@ -31,19 +43,27 @@ const schema: JSONSchema4 = [
   },
 ];
 
-// The default options for the rule.
-const defaultOptions: Options = {
-  checkInterfaces: true,
-  checkTypeLiterals: true,
-};
+/**
+ * The default options for the rule.
+ */
+const defaultOptions: Options = [
+  {
+    checkInterfaces: true,
+    checkTypeLiterals: true,
+  },
+];
 
-// The possible error messages.
+/**
+ * The possible error messages.
+ */
 const errorMessages = {
   generic: "Only the same kind of members allowed in types.",
 } as const;
 
-// The meta data for this rule.
-const meta: RuleMetaData<keyof typeof errorMessages> = {
+/**
+ * The meta data for this rule.
+ */
+const meta: ESLintUtils.NamedCreateRuleMeta<keyof typeof errorMessages> = {
   type: "suggestion",
   docs: {
     description:
@@ -102,13 +122,15 @@ function hasTypeElementViolations(
  */
 function checkTSInterfaceDeclaration(
   node: TSESTree.TSInterfaceDeclaration,
-  context: RuleContext<keyof typeof errorMessages, Options>,
+  context: TSESLint.RuleContext<keyof typeof errorMessages, Options>,
   options: Options
 ): RuleResult<keyof typeof errorMessages, Options> {
+  const [{ checkInterfaces }] = options;
+
   return {
     context,
     descriptors:
-      options.checkInterfaces && hasTypeElementViolations(node.body.body)
+      checkInterfaces && hasTypeElementViolations(node.body.body)
         ? [{ node, messageId: "generic" }]
         : [],
   };
@@ -119,13 +141,15 @@ function checkTSInterfaceDeclaration(
  */
 function checkTSTypeAliasDeclaration(
   node: TSESTree.TSTypeAliasDeclaration,
-  context: RuleContext<keyof typeof errorMessages, Options>,
+  context: TSESLint.RuleContext<keyof typeof errorMessages, Options>,
   options: Options
 ): RuleResult<keyof typeof errorMessages, Options> {
+  const [{ checkTypeLiterals }] = options;
+
   return {
     context,
     descriptors:
-      options.checkTypeLiterals &&
+      checkTypeLiterals &&
       isTSTypeLiteral(node.typeAnnotation) &&
       hasTypeElementViolations(node.typeAnnotation.members)
         ? [{ node, messageId: "generic" }]

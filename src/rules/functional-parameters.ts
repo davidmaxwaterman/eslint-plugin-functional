@@ -1,4 +1,8 @@
-import type { TSESTree } from "@typescript-eslint/experimental-utils";
+import type {
+  ESLintUtils,
+  TSESLint,
+  TSESTree,
+} from "@typescript-eslint/experimental-utils";
 import { deepmerge } from "deepmerge-ts";
 import type { JSONSchema4 } from "json-schema";
 
@@ -7,30 +11,42 @@ import {
   shouldIgnorePattern,
   ignorePatternOptionSchema,
 } from "~/common/ignore-options";
-import type { RuleContext, RuleMetaData, RuleResult } from "~/util/rule";
+import type { RuleResult } from "~/util/rule";
 import { createRule } from "~/util/rule";
 import { isIIFE, isPropertyAccess, isPropertyName } from "~/util/tree";
 import { isRestElement } from "~/util/typeguard";
 
-// The name of this rule.
+/**
+ * The name of this rule.
+ */
 export const name = "functional-parameters" as const;
 
+/**
+ * The parameter count options this rule can take.
+ */
 type ParameterCountOptions = "atLeastOne" | "exactlyOne";
 
-// The options this rule can take.
-type Options = IgnorePatternOption & {
-  readonly allowRestParameter: boolean;
-  readonly allowArgumentsKeyword: boolean;
-  readonly enforceParameterCount:
-    | ParameterCountOptions
-    | false
-    | {
-        readonly count: ParameterCountOptions;
-        readonly ignoreIIFE: boolean;
-      };
-};
+/**
+ * The options this rule can take.
+ */
+type Options = readonly [
+  IgnorePatternOption &
+    Readonly<{
+      allowRestParameter: boolean;
+      allowArgumentsKeyword: boolean;
+      enforceParameterCount:
+        | ParameterCountOptions
+        | false
+        | Readonly<{
+            count: ParameterCountOptions;
+            ignoreIIFE: boolean;
+          }>;
+    }>
+];
 
-// The schema for the rule options.
+/**
+ * The schema for the rule options.
+ */
 const schema: JSONSchema4 = [
   deepmerge(ignorePatternOptionSchema, {
     type: "object",
@@ -71,17 +87,23 @@ const schema: JSONSchema4 = [
   }),
 ];
 
-// The default options for the rule.
-const defaultOptions: Options = {
-  allowRestParameter: false,
-  allowArgumentsKeyword: false,
-  enforceParameterCount: {
-    count: "atLeastOne",
-    ignoreIIFE: true,
+/**
+ * The default options for the rule.
+ */
+const defaultOptions: Options = [
+  {
+    allowRestParameter: false,
+    allowArgumentsKeyword: false,
+    enforceParameterCount: {
+      count: "atLeastOne",
+      ignoreIIFE: true,
+    },
   },
-};
+];
 
-// The possible error messages.
+/**
+ * The possible error messages.
+ */
 const errorMessages = {
   restParam:
     "Unexpected rest parameter. Use a regular parameter of type array instead.",
@@ -91,8 +113,10 @@ const errorMessages = {
   paramCountExactlyOne: "Functions must have exactly one parameter.",
 } as const;
 
-// The meta data for this rule.
-const meta: RuleMetaData<keyof typeof errorMessages> = {
+/**
+ * The meta data for this rule.
+ */
+const meta: ESLintUtils.NamedCreateRuleMeta<keyof typeof errorMessages> = {
   type: "suggestion",
   docs: {
     description: "Enforce functional parameters.",
@@ -106,7 +130,7 @@ const meta: RuleMetaData<keyof typeof errorMessages> = {
  * Get the rest parameter violations.
  */
 function getRestParamViolations(
-  allowRestParameter: Options["allowRestParameter"],
+  [{ allowRestParameter }]: Options,
   node:
     | TSESTree.ArrowFunctionExpression
     | TSESTree.FunctionDeclaration
@@ -128,7 +152,7 @@ function getRestParamViolations(
  * Get the parameter count violations.
  */
 function getParamCountViolations(
-  enforceParameterCount: Options["enforceParameterCount"],
+  [{ enforceParameterCount }]: Options,
   node:
     | TSESTree.ArrowFunctionExpression
     | TSESTree.FunctionDeclaration
@@ -180,10 +204,12 @@ function checkFunction(
     | TSESTree.ArrowFunctionExpression
     | TSESTree.FunctionDeclaration
     | TSESTree.FunctionExpression,
-  context: RuleContext<keyof typeof errorMessages, Options>,
+  context: TSESLint.RuleContext<keyof typeof errorMessages, Options>,
   options: Options
 ): RuleResult<keyof typeof errorMessages, Options> {
-  if (shouldIgnorePattern(node, context, options)) {
+  const [optionsObject] = options;
+
+  if (shouldIgnorePattern(node, context, optionsObject)) {
     return {
       context,
       descriptors: [],
@@ -193,8 +219,8 @@ function checkFunction(
   return {
     context,
     descriptors: [
-      ...getRestParamViolations(options.allowRestParameter, node),
-      ...getParamCountViolations(options.enforceParameterCount, node),
+      ...getRestParamViolations(options, node),
+      ...getParamCountViolations(options, node),
     ],
   };
 }
@@ -204,20 +230,24 @@ function checkFunction(
  */
 function checkIdentifier(
   node: TSESTree.Identifier,
-  context: RuleContext<keyof typeof errorMessages, Options>,
+  context: TSESLint.RuleContext<keyof typeof errorMessages, Options>,
   options: Options
 ): RuleResult<keyof typeof errorMessages, Options> {
-  if (shouldIgnorePattern(node, context, options)) {
+  const [optionsObject] = options;
+
+  if (shouldIgnorePattern(node, context, optionsObject)) {
     return {
       context,
       descriptors: [],
     };
   }
 
+  const { allowArgumentsKeyword } = optionsObject;
+
   return {
     context,
     descriptors:
-      !options.allowArgumentsKeyword &&
+      !allowArgumentsKeyword &&
       node.name === "arguments" &&
       !isPropertyName(node) &&
       !isPropertyAccess(node)

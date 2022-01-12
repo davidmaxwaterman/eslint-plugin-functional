@@ -3,7 +3,7 @@ import type { Rule, RuleTester as ESLintRuleTester } from "eslint";
 
 import ts from "~/conditional-imports/typescript";
 
-import { filename } from "./configs";
+import { filename as dummyFilename } from "./configs";
 
 type OptionsSet = {
   /**
@@ -32,7 +32,7 @@ export function processInvalidTestCase(
     testCase.optionsSet.map((options) => {
       const { optionsSet, ...eslintTestCase } = testCase;
       return {
-        filename,
+        filename: dummyFilename,
         ...eslintTestCase,
         options,
       };

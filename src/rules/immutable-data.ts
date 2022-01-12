@@ -1,4 +1,8 @@
-import type { TSESTree } from "@typescript-eslint/experimental-utils";
+import type {
+  ESLintUtils,
+  TSESLint,
+  TSESTree,
+} from "@typescript-eslint/experimental-utils";
 import { deepmerge } from "deepmerge-ts";
 import type { JSONSchema4 } from "json-schema";
 
@@ -16,7 +20,7 @@ import {
 } from "~/common/ignore-options";
 import { isExpected } from "~/util/misc";
 import { createRule, getTypeOfNode } from "~/util/rule";
-import type { RuleContext, RuleMetaData, RuleResult } from "~/util/rule";
+import type { RuleResult } from "~/util/rule";
 import { inConstructor } from "~/util/tree";
 import {
   isArrayConstructorType,
@@ -29,23 +33,32 @@ import {
   isObjectConstructorType,
 } from "~/util/typeguard";
 
-// The name of this rule.
+/**
+ * The name of this rule.
+ */
 export const name = "immutable-data" as const;
 
-// The options this rule can take.
-type Options = IgnoreAccessorPatternOption &
-  IgnoreClassOption &
-  IgnorePatternOption & {
-    readonly ignoreImmediateMutation: boolean;
-    readonly assumeTypes:
-      | boolean
-      | {
-          readonly forArrays: boolean;
-          readonly forObjects: boolean;
-        };
-  };
+/**
+ * The options this rule can take.
+ */
+type Options = readonly [
+  IgnoreAccessorPatternOption &
+    IgnoreClassOption &
+    IgnorePatternOption &
+    Readonly<{
+      ignoreImmediateMutation: boolean;
+      assumeTypes:
+        | boolean
+        | Readonly<{
+            forArrays: boolean;
+            forObjects: boolean;
+          }>;
+    }>
+];
 
-// The schema for the rule options.
+/**
+ * The schema for the rule options.
+ */
 const schema: JSONSchema4 = [
   deepmerge(
     ignorePatternOptionSchema,
@@ -82,25 +95,33 @@ const schema: JSONSchema4 = [
   ),
 ];
 
-// The default options for the rule.
-const defaultOptions: Options = {
-  ignoreClass: false,
-  ignoreImmediateMutation: true,
-  assumeTypes: {
-    forArrays: true,
-    forObjects: true,
+/**
+ * The default options for the rule.
+ */
+const defaultOptions: Options = [
+  {
+    ignoreClass: false,
+    ignoreImmediateMutation: true,
+    assumeTypes: {
+      forArrays: true,
+      forObjects: true,
+    },
   },
-};
+];
 
-// The possible error messages.
+/**
+ * The possible error messages.
+ */
 const errorMessages = {
   generic: "Modifying an existing object/array is not allowed.",
   object: "Modifying properties of existing object not allowed.",
   array: "Modifying an array is not allowed.",
 } as const;
 
-// The meta data for this rule.
-const meta: RuleMetaData<keyof typeof errorMessages> = {
+/**
+ * The meta data for this rule.
+ */
+const meta: ESLintUtils.NamedCreateRuleMeta<keyof typeof errorMessages> = {
   type: "suggestion",
   docs: {
     description: "Enforce treating data as immutable.",
@@ -166,13 +187,15 @@ const objectConstructorMutatorFunctions = new Set([
  */
 function checkAssignmentExpression(
   node: TSESTree.AssignmentExpression,
-  context: RuleContext<keyof typeof errorMessages, Options>,
+  context: TSESLint.RuleContext<keyof typeof errorMessages, Options>,
   options: Options
 ): RuleResult<keyof typeof errorMessages, Options> {
+  const [optionsObject] = options;
+
   if (
     !isMemberExpression(node.left) ||
-    shouldIgnoreClass(node, context, options) ||
-    shouldIgnorePattern(node, context, options)
+    shouldIgnoreClass(node, context, optionsObject) ||
+    shouldIgnorePattern(node, context, optionsObject)
   ) {
     return {
       context,
@@ -193,13 +216,15 @@ function checkAssignmentExpression(
  */
 function checkUnaryExpression(
   node: TSESTree.UnaryExpression,
-  context: RuleContext<keyof typeof errorMessages, Options>,
+  context: TSESLint.RuleContext<keyof typeof errorMessages, Options>,
   options: Options
 ): RuleResult<keyof typeof errorMessages, Options> {
+  const [optionsObject] = options;
+
   if (
     !isMemberExpression(node.argument) ||
-    shouldIgnoreClass(node, context, options) ||
-    shouldIgnorePattern(node, context, options)
+    shouldIgnoreClass(node, context, optionsObject) ||
+    shouldIgnorePattern(node, context, optionsObject)
   ) {
     return {
       context,
@@ -219,13 +244,15 @@ function checkUnaryExpression(
  */
 function checkUpdateExpression(
   node: TSESTree.UpdateExpression,
-  context: RuleContext<keyof typeof errorMessages, Options>,
+  context: TSESLint.RuleContext<keyof typeof errorMessages, Options>,
   options: Options
 ): RuleResult<keyof typeof errorMessages, Options> {
+  const [optionsObject] = options;
+
   if (
     !isMemberExpression(node.argument) ||
-    shouldIgnoreClass(node.argument, context, options) ||
-    shouldIgnorePattern(node.argument, context, options)
+    shouldIgnoreClass(node.argument, context, optionsObject) ||
+    shouldIgnorePattern(node.argument, context, optionsObject)
   ) {
     return {
       context,
@@ -248,7 +275,7 @@ function checkUpdateExpression(
  */
 function isInChainCallAndFollowsNew(
   node: TSESTree.MemberExpression,
-  context: RuleContext<keyof typeof errorMessages, Options>,
+  context: TSESLint.RuleContext<keyof typeof errorMessages, Options>,
   assumeArrayTypes: boolean
 ): boolean {
   return (
@@ -286,15 +313,17 @@ function isInChainCallAndFollowsNew(
  */
 function checkCallExpression(
   node: TSESTree.CallExpression,
-  context: RuleContext<keyof typeof errorMessages, Options>,
+  context: TSESLint.RuleContext<keyof typeof errorMessages, Options>,
   options: Options
 ): RuleResult<keyof typeof errorMessages, Options> {
+  const [optionsObject] = options;
+
   // Not potential object mutation?
   if (
     !isMemberExpression(node.callee) ||
     !isIdentifier(node.callee.property) ||
-    shouldIgnoreClass(node.callee.object, context, options) ||
-    shouldIgnorePattern(node.callee.object, context, options)
+    shouldIgnoreClass(node.callee.object, context, optionsObject) ||
+    shouldIgnorePattern(node.callee.object, context, optionsObject)
   ) {
     return {
       context,
@@ -302,14 +331,16 @@ function checkCallExpression(
     };
   }
 
+  const { assumeTypes, ignoreImmediateMutation } = optionsObject;
+
   const assumeTypesForArrays =
-    options.assumeTypes === true ||
-    (options.assumeTypes !== false && options.assumeTypes.forArrays === true);
+    assumeTypes === true ||
+    (assumeTypes !== false && assumeTypes.forArrays === true);
 
   // Array mutation?
   if (
     arrayMutatorMethods.has(node.callee.property.name) &&
-    (!options.ignoreImmediateMutation ||
+    (!ignoreImmediateMutation ||
       !isInChainCallAndFollowsNew(
         node.callee,
         context,
@@ -328,8 +359,8 @@ function checkCallExpression(
   }
 
   const assumeTypesForObjects =
-    options.assumeTypes === true ||
-    (options.assumeTypes !== false && options.assumeTypes.forObjects === true);
+    assumeTypes === true ||
+    (assumeTypes !== false && assumeTypes.forObjects === true);
 
   // Non-array object mutation (ex. Object.assign on identifier)?
   if (
@@ -337,8 +368,8 @@ function checkCallExpression(
     node.arguments.length >= 2 &&
     (isIdentifier(node.arguments[0]) ||
       isMemberExpression(node.arguments[0])) &&
-    !shouldIgnoreClass(node.arguments[0], context, options) &&
-    !shouldIgnorePattern(node.arguments[0], context, options) &&
+    !shouldIgnoreClass(node.arguments[0], context, optionsObject) &&
+    !shouldIgnorePattern(node.arguments[0], context, optionsObject) &&
     isObjectConstructorType(
       getTypeOfNode(node.callee.object, context),
       assumeTypesForObjects,

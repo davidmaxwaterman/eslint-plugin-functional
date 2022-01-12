@@ -1,9 +1,13 @@
-import type { TSESTree } from "@typescript-eslint/experimental-utils";
+import type {
+  ESLintUtils,
+  TSESLint,
+  TSESTree,
+} from "@typescript-eslint/experimental-utils";
 import type { JSONSchema4 } from "json-schema";
 import type { Type } from "typescript";
 
 import tsutils from "~/conditional-imports/tsutils";
-import type { RuleContext, RuleMetaData, RuleResult } from "~/util/rule";
+import type { RuleResult } from "~/util/rule";
 import { createRule, getTypeOfNode } from "~/util/rule";
 import {
   isBlockStatement,
@@ -17,15 +21,23 @@ import {
   isThrowStatement,
 } from "~/util/typeguard";
 
-// The name of this rule.
+/**
+ * The name of this rule.
+ */
 export const name = "no-conditional-statement" as const;
 
-// The options this rule can take.
-type Options = {
-  readonly allowReturningBranches: boolean | "ifExhaustive";
-};
+/**
+ * The options this rule can take.
+ */
+type Options = readonly [
+  Readonly<{
+    allowReturningBranches: boolean | "ifExhaustive";
+  }>
+];
 
-// The schema for the rule options.
+/**
+ * The schema for the rule options.
+ */
 const schema: JSONSchema4 = [
   {
     type: "object",
@@ -46,10 +58,14 @@ const schema: JSONSchema4 = [
   },
 ];
 
-// The default options for the rule.
-const defaultOptions: Options = { allowReturningBranches: false };
+/**
+ * The default options for the rule.
+ */
+const defaultOptions: Options = [{ allowReturningBranches: false }];
 
-// The possible error messages.
+/**
+ * The possible error messages.
+ */
 const errorMessages = {
   incompleteBranch:
     "Incomplete branch, every branch in a conditional statement must contain a return statement.",
@@ -63,8 +79,10 @@ const errorMessages = {
     "Unexpected switch, use a conditional expression (ternary operator) instead.",
 } as const;
 
-// The meta data for this rule.
-const meta: RuleMetaData<keyof typeof errorMessages> = {
+/**
+ * The meta data for this rule.
+ */
+const meta: ESLintUtils.NamedCreateRuleMeta<keyof typeof errorMessages> = {
   type: "suggestion",
   docs: {
     description: "Disallow conditional statements.",
@@ -90,7 +108,7 @@ function incompleteBranchViolation(
  * Get a function that tests if the given statement is never returning.
  */
 function getIsNeverExpressions(
-  context: RuleContext<keyof typeof errorMessages, Options>
+  context: TSESLint.RuleContext<keyof typeof errorMessages, Options>
 ) {
   return (statement: TSESTree.Statement) => {
     if (isExpressionStatement(statement)) {
@@ -108,9 +126,6 @@ function getIsNeverExpressions(
 
 /**
  * Is the given statement, when inside an if statement, a returning branch?
- *
- * @param statement
- * @returns
  */
 function isIfReturningBranch(statement: TSESTree.Statement) {
   return (
@@ -129,7 +144,7 @@ function isIfReturningBranch(statement: TSESTree.Statement) {
  */
 function getIfBranchViolations(
   node: TSESTree.IfStatement,
-  context: RuleContext<keyof typeof errorMessages, Options>
+  context: TSESLint.RuleContext<keyof typeof errorMessages, Options>
 ): RuleResult<keyof typeof errorMessages, Options>["descriptors"] {
   const branches = [node.consequent, node.alternate];
   const violations = branches.filter<NonNullable<typeof branches[0]>>(
@@ -172,9 +187,6 @@ function getIfBranchViolations(
 
 /**
  * Is the given statement, when inside a switch statement, a returning branch?
- *
- * @param statement
- * @returns
  */
 function isSwitchReturningBranch(statement: TSESTree.Statement) {
   return (
@@ -191,7 +203,7 @@ function isSwitchReturningBranch(statement: TSESTree.Statement) {
  */
 function getSwitchViolations(
   node: TSESTree.SwitchStatement,
-  context: RuleContext<keyof typeof errorMessages, Options>
+  context: TSESLint.RuleContext<keyof typeof errorMessages, Options>
 ): RuleResult<keyof typeof errorMessages, Options>["descriptors"] {
   const isNeverExpressions = getIsNeverExpressions(context);
 
@@ -237,7 +249,7 @@ function isExhaustiveIfViolation(node: TSESTree.IfStatement): boolean {
  */
 function isExhaustiveTypeSwitchViolation(
   node: TSESTree.SwitchStatement,
-  context: RuleContext<keyof typeof errorMessages, Options>
+  context: TSESLint.RuleContext<keyof typeof errorMessages, Options>
 ): boolean {
   if (tsutils === undefined) {
     return true;
@@ -262,7 +274,7 @@ function isExhaustiveTypeSwitchViolation(
  */
 function isExhaustiveSwitchViolation(
   node: TSESTree.SwitchStatement,
-  context: RuleContext<keyof typeof errorMessages, Options>
+  context: TSESLint.RuleContext<keyof typeof errorMessages, Options>
 ): boolean {
   return (
     // No cases defined.
@@ -277,15 +289,17 @@ function isExhaustiveSwitchViolation(
  */
 function checkIfStatement(
   node: TSESTree.IfStatement,
-  context: RuleContext<keyof typeof errorMessages, Options>,
+  context: TSESLint.RuleContext<keyof typeof errorMessages, Options>,
   options: Options
 ): RuleResult<keyof typeof errorMessages, Options> {
+  const [{ allowReturningBranches }] = options;
+
   return {
     context,
     descriptors:
-      options.allowReturningBranches === false
+      allowReturningBranches === false
         ? [{ node, messageId: "unexpectedIf" }]
-        : options.allowReturningBranches === "ifExhaustive"
+        : allowReturningBranches === "ifExhaustive"
         ? isExhaustiveIfViolation(node)
           ? [{ node, messageId: "incompleteIf" }]
           : getIfBranchViolations(node, context)
@@ -298,15 +312,17 @@ function checkIfStatement(
  */
 function checkSwitchStatement(
   node: TSESTree.SwitchStatement,
-  context: RuleContext<keyof typeof errorMessages, Options>,
+  context: TSESLint.RuleContext<keyof typeof errorMessages, Options>,
   options: Options
 ): RuleResult<keyof typeof errorMessages, Options> {
+  const [{ allowReturningBranches }] = options;
+
   return {
     context,
     descriptors:
-      options.allowReturningBranches === false
+      allowReturningBranches === false
         ? [{ node, messageId: "unexpectedSwitch" }]
-        : options.allowReturningBranches === "ifExhaustive"
+        : allowReturningBranches === "ifExhaustive"
         ? isExhaustiveSwitchViolation(node, context)
           ? [{ node, messageId: "incompleteSwitch" }]
           : getSwitchViolations(node, context)
